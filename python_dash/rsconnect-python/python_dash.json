@@ -1,0 +1,12 @@
+{
+    "https://api.shinyapps.io": {
+        "server_url": "https://api.shinyapps.io",
+        "filename": "/Users/dawsonkinsman/Documents/shotspotter/python_dash",
+        "app_url": "https://m7kqg7-dawson-kinsman.shinyapps.io/python_dash/",
+        "app_id": 10075175,
+        "app_guid": null,
+        "title": "python_dash",
+        "app_mode": "python-shiny",
+        "app_store_version": 1
+    }
+}
