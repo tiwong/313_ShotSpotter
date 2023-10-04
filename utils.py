@@ -23,7 +23,7 @@ def get_911_data():
     df.columns = ['incident_id', 'agency', 'incident_address', 'zip_code', 'priority', 'callcode', 'calldescription', 'category', 'call_timestamp','precinct_sca', 'respondingunit', 'officerinitiated', 'intaketime','dispatchtime', 'traveltime', 'totalresponsetime', 'time_on_scene', 'totaltime', 'neighborhood', 'block_id', 'council_district', 'longitude', 'latitude', 'shape', 'ObjectId', 'X', 'Y']
 
     df.drop_duplicates(subset='incident_id', inplace=True)
-    df.call_timestamp = pd.to_datetime(df.call_timestamp)
+    df.call_timestamp = pd.to_datetime(df.call_timestamp, unit = 'ms')
     df.X = df.X.astype('float64')
     df.Y = df.Y.astype('float64')
     df.loc[(df.zip_code == '     ') | (df.zip_code == '0    '), 'zip_code'] = '0'
@@ -39,7 +39,7 @@ def get_911_data():
     weeks = df.call_timestamp.dt.isocalendar().week
 
     df['week_nums'] = weeks + (years - min(years)) * 52
-    df['sca']= [re.sub('[^0-9]','', str(x)) for x in df.precinct_sca]
+    df['sca']= [re.sub('[^0-9]','', str(x)).lstrip('0') for x in df.precinct_sca]
     return df
 
 def get_zipcodes():
