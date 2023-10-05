@@ -1,2 +1,4 @@
 shiny
 shinyswatch
+shinywidgets
+faicons

@@ -35,11 +35,11 @@ def get_911_data():
        'totaltime']
     df[time_features] = df[time_features].replace(',', '', regex=True).astype('float64')
 
-    years = df.call_timestamp.dt.isocalendar().year
-    weeks = df.call_timestamp.dt.isocalendar().week
-
-    df['week_nums'] = weeks + (years - min(years)) * 52
     df['sca']= [re.sub('[^0-9]','', str(x)).lstrip('0') for x in df.precinct_sca]
+    df = df[df.sca != '']
+    df['day'] = df.call_timestamp.dt.strftime('%Y-%m-%d')
+    df['month'] = df.call_timestamp.dt.strftime('%Y-%m')
+    df['week'] = df.call_timestamp.dt.strftime('%Y-%U')
     return df
 
 def get_zipcodes():
@@ -53,3 +53,26 @@ def get_SCAs():
     response = requests.get(sca_url)
     sca = response.json()
     return sca
+
+def read_911_data():
+    df = pd.read_csv('911_Calls_For_Service_Shots.csv')
+
+    df.drop_duplicates(subset='incident_id', inplace=True)
+    df.call_timestamp = pd.to_datetime(df.call_timestamp)
+    df.X = df.X.astype('float64')
+    df.Y = df.Y.astype('float64')
+    df.loc[(df.zip_code == '     ') | (df.zip_code == '0    '), 'zip_code'] = '0'
+    df.zip_code = df.zip_code.astype('Int64')
+    df = df[df.calldescription != 'SYSTEM TEST - SHOTSPOTTER']
+
+    time_features = ['intaketime',
+       'dispatchtime', 'traveltime', 'totalresponsetime', 'time_on_scene',
+       'totaltime']
+    df[time_features] = df[time_features].replace(',', '', regex=True).astype('float64')
+
+    df['sca']= [re.sub('[^0-9]','', str(x)).lstrip('0') for x in df.precinct_sca]
+    df = df[df.sca != '']
+    df['day'] = df.call_timestamp.dt.strftime('%Y-%m-%d')
+    df['month'] = df.call_timestamp.dt.strftime('%Y-%m')
+    df['week'] = df.call_timestamp.dt.strftime('%Y-%U')
+    return df
