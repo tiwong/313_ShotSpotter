@@ -1,8 +1,7 @@
-import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
 import requests
 import re
+
 
 def get_911_data():
     """ PULL FROM OPEN DATA PORTAL API TO PANDAS DF """
@@ -12,41 +11,48 @@ def get_911_data():
     offset = 0
 
     while True:
-        response = requests.get(url, params= {'resultOffset':offset})
+        response = requests.get(url, params={'resultOffset': offset})
         data = response.json().get('features')
-        df = pd.concat([df, pd.json_normalize(data)], axis = 0, ignore_index= True)
-        if len(data) < 1000: 
+        df = pd.concat([df, pd.json_normalize(data)],
+                       axis=0, ignore_index=True)
+        if len(data) < 1000:
             break
         offset += 1000
 
     # Cleaning
-    df.columns = ['incident_id', 'agency', 'incident_address', 'zip_code', 'priority', 'callcode', 'calldescription', 'category', 'call_timestamp','precinct_sca', 'respondingunit', 'officerinitiated', 'intaketime','dispatchtime', 'traveltime', 'totalresponsetime', 'time_on_scene', 'totaltime', 'neighborhood', 'block_id', 'council_district', 'longitude', 'latitude', 'shape', 'ObjectId', 'X', 'Y']
+    df.columns = ['incident_id', 'agency', 'incident_address', 'zip_code', 'priority', 'callcode', 'calldescription', 'category', 'call_timestamp', 'precinct_sca', 'respondingunit', 'officerinitiated',
+                  'intaketime', 'dispatchtime', 'traveltime', 'totalresponsetime', 'time_on_scene', 'totaltime', 'neighborhood', 'block_id', 'council_district', 'longitude', 'latitude', 'shape', 'ObjectId', 'X', 'Y']
 
     df.drop_duplicates(subset='incident_id', inplace=True)
-    df.call_timestamp = pd.to_datetime(df.call_timestamp, unit = 'ms')
+    df.call_timestamp = pd.to_datetime(df.call_timestamp, unit='ms')
     df.longitude = df.longitude.astype('float64')
     df.latitude = df.latitude.astype('float64')
-    df.loc[(df.zip_code == '     ') | (df.zip_code == '0    '), 'zip_code'] = '0'
+    df.loc[(df.zip_code == '     ') | (
+        df.zip_code == '0    '), 'zip_code'] = '0'
     df.zip_code = df.zip_code.astype('Int64')
     df = df[df.calldescription != 'SYSTEM TEST - SHOTSPOTTER']
 
     time_features = ['intaketime',
-       'dispatchtime', 'traveltime', 'totalresponsetime', 'time_on_scene',
-       'totaltime']
-    df[time_features] = df[time_features].replace(',', '', regex=True).astype('float64')
+                     'dispatchtime', 'traveltime', 'totalresponsetime', 'time_on_scene',
+                     'totaltime']
+    df[time_features] = df[time_features].replace(
+        ',', '', regex=True).astype('float64')
 
-    df['sca']= [re.sub('[^0-9]','', str(x)).lstrip('0') for x in df.precinct_sca]
+    df['sca'] = [re.sub('[^0-9]', '', str(x)).lstrip('0')
+                 for x in df.precinct_sca]
     df = df[df.sca != '']
     df['day'] = df.call_timestamp.dt.strftime('%Y-%m-%d')
     df['month'] = df.call_timestamp.dt.strftime('%Y-%m')
     df['week'] = df.call_timestamp.dt.strftime('%Y-%U')
     return df
 
+
 def get_zipcodes():
     zipcodes_url = 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ZipCodes/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson'
     response = requests.get(zipcodes_url)
     zipcodes = response.json()
     return zipcodes
+
 
 def get_SCAs():
     sca_url = 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/DPD_SCAs/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson'
@@ -74,25 +80,30 @@ def get_SCAs():
 #     )
 #     return fig
 
+
 def read_911_data():
-    df = pd.read_csv('911_Calls_For_Service_Shots.csv')
+    df = pd.read_csv('911_Calls_For_Service_Shots.csv', low_memory=False)
 
     df.drop_duplicates(subset='incident_id', inplace=True)
     df.call_timestamp = pd.to_datetime(df.call_timestamp)
     df.X = df.X.astype('float64')
     df.Y = df.Y.astype('float64')
-    df.loc[(df.zip_code == '     ') | (df.zip_code == '0    '), 'zip_code'] = '0'
+    df.loc[(df.zip_code == '     ') | (
+        df.zip_code == '0    '), 'zip_code'] = '0'
     df.zip_code = df.zip_code.astype('Int64')
     df = df[df.calldescription != 'SYSTEM TEST - SHOTSPOTTER']
 
     time_features = ['intaketime',
-       'dispatchtime', 'traveltime', 'totalresponsetime', 'time_on_scene',
-       'totaltime']
-    df[time_features] = df[time_features].replace(',', '', regex=True).astype('float64')
+                     'dispatchtime', 'traveltime', 'totalresponsetime', 'time_on_scene',
+                     'totaltime']
+    df[time_features] = df[time_features].replace(
+        ',', '', regex=True).astype('float64')
 
-    df['sca']= [re.sub('[^0-9]','', str(x)).lstrip('0') for x in df.precinct_sca]
+    df['sca'] = [re.sub('[^0-9]', '', str(x)).lstrip('0')
+                 for x in df.precinct_sca]
     df = df[df.sca != '']
     df['day'] = df.call_timestamp.dt.strftime('%Y-%m-%d')
     df['month'] = df.call_timestamp.dt.strftime('%Y-%m')
     df['week'] = df.call_timestamp.dt.strftime('%Y-%U')
+    df['precinct_sca'] = df['precinct_sca'].str.strip()
     return df

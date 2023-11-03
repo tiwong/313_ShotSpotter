@@ -2,3 +2,6 @@ shiny
 shinyswatch
 shinywidgets
 faicons
+pandas
+plotly
+requests
