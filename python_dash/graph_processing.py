@@ -1,10 +1,11 @@
 import statistics
-from utils import create_all_files, get_911_data, clean_911, load_911
+from utils import create_all_files, get_911_data, clean_911, get_SCAs, load_911
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objs as go
 import ipywidgets as widgets
+from scipy.stats.mstats import winsorize
 
 # create_all_files()
 
@@ -63,7 +64,10 @@ def create_recanvas_list():
     for time in time_difference_list:
         updated_time_list.append((time.days*24 + time.seconds//3600) / 24)
 
-    return updated_time_list
+    updated_time_array = np.array(updated_time_list, dtype=np.float32)
+    updated_time_array = winsorize(updated_time_array, (0.01, 0.3))
+
+    return updated_time_array
 
 
 def create_recanvas_graph():
@@ -78,7 +82,6 @@ def create_recanvas_summary():
     mean = sum(updated_time_list) / len(updated_time_list)
     median = statistics.median(updated_time_list)
     mode = statistics.mode(updated_time_list)
-    std_deviation = statistics.stdev(updated_time_list)
     data_range = max(updated_time_list) - min(updated_time_list)
     q1 = statistics.quantiles(updated_time_list, n=4)[0]
     q3 = statistics.quantiles(updated_time_list, n=4)[2]
@@ -86,7 +89,6 @@ def create_recanvas_summary():
     return f"""Mean: {mean:.2f}
 Median: {median:.2f}
 Mode: {mode:.2f}
-Standard Deviation: {std_deviation:.2f}
 Range: {data_range:.2f}
 Q1 (25th percentile): {q1:.2f}
 Q3 (75th percentile): {q3:.2f}"""
@@ -180,7 +182,6 @@ def create_sca_summary(precinct):
 
         total_calls_sca = len(sca_data)
 
-        print(sca, total_calls_sca)
         summary['total_calls'] += total_calls_sca
 
         category_counts = sca_data['category'].value_counts().to_dict()
@@ -242,7 +243,7 @@ def create_weekly_graph():
 
     fig.update_layout(
         yaxis_range=[0, 500],
-        title="Weekly Shotspotter Incidents"
+        title="Weekly ShotSpotter Incidents"
     )
 
     return fig
@@ -272,12 +273,34 @@ def create_weekly_summary():
     average_non_shotspt = weekly_counts_non_shotspt.mean()
     peak_non_shotspt = weekly_counts_non_shotspt.max()
 
-    summary_str = f"Weekly Shotspotter Summary:\n"
-    summary_str += f"Total Shotspotter Incidents: {total_shotspt}\n"
-    summary_str += f"Average Shotspotter Incidents per Week: {average_shotspt:.2f}\n"
-    summary_str += f"Peak Week for Shotspotter Incidents: {peak_shotspt}\n"
-    summary_str += f"Total Non-Shotspotter Incidents: {total_non_shotspt}\n"
-    summary_str += f"Average Non-Shotspotter Incidents per Week: {average_non_shotspt:.2f}\n"
-    summary_str += f"Peak Week for Non-Shotspotter Incidents: {peak_non_shotspt}\n"
+    summary_str = f"Weekly ShotSpotter Summary:\n"
+    summary_str += f"Total ShotSpotter Incidents: {total_shotspt}\n"
+    summary_str += f"Average ShotSpotter Incidents per Week: {average_shotspt:.2f}\n"
+    summary_str += f"Peak Week for ShotSpotter Incidents: {peak_shotspt}\n"
+    summary_str += f"Total Non-ShotSpotter Incidents: {total_non_shotspt}\n"
+    summary_str += f"Average Non-ShotSpotter Incidents per Week: {average_non_shotspt:.2f}\n"
+    summary_str += f"Peak Week for Non-ShotSpotter Incidents: {peak_non_shotspt}\n"
 
     return summary_str
+
+# Map
+
+
+def create_map():
+    sca = get_SCAs()
+    sca_counts = total911.groupby(by=['sca']).size().to_frame().reset_index()
+    sca_counts.columns = ['sca', 'shots']
+    sca_counts.sort_values(by='shots')
+
+    fig = px.choropleth_mapbox(sca_counts, geojson=sca,
+                               locations='sca',
+                               color='shots',
+                               featureidkey="properties.Area",
+                               mapbox_style='carto-positron',
+                               color_continuous_scale='matter',
+                               zoom=9.25,
+                               center={'lat': 42.3314, 'lon': -83.0458},
+                               opacity=0.85,
+                               title='All Gunshots')
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    return fig

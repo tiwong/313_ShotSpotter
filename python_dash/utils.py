@@ -139,3 +139,10 @@ def create_recanvas_data():
 def create_all_files():
     clean_911(get_911_data(), True)
     create_recanvas_data()
+
+
+def get_SCAs():
+    sca_url = 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/DPD_SCAs/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson'
+    response = requests.get(sca_url)
+    sca = response.json()
+    return sca
