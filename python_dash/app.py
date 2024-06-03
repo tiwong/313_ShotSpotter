@@ -1,4 +1,4 @@
-from graph_processing import create_911_summary, create_map, create_recanvas_summary, create_sca_graph, create_911_graph, create_recanvas_graph, create_sca_graphs, create_sca_summary, create_weekly_graph, create_weekly_summary, get_precincts
+from graph_processing import create_911_summary, create_combined_map, create_greenlight_map, create_map, create_map_only_SS, create_recanvas_summary, create_sca_graph, create_911_graph, create_recanvas_graph, create_sca_graphs, create_sca_summary, create_weekly_graph, create_weekly_summary, get_precincts
 from shiny import App, render, reactive, ui
 import shinyswatch
 from shinywidgets import output_widget, register_widget, render_widget
@@ -7,7 +7,7 @@ from pathlib import Path
 
 text_dict = {}
 file_names = ["recanvas", "scout_car_areas",
-              "total_911_calls", "weekly_shotspotter_incidents", "gunshots_sca"]
+              "total_911_calls", "weekly_shotspotter_incidents", "gunshots_sca", "gunshots_sca_shotspotter_only", "project_greenlight", "combined_visualization"]
 
 for file in file_names:
     with open("Summaries/" + file + ".html") as f:
@@ -27,7 +27,7 @@ app_ui = ui.page_navbar(
                          ui.output_ui("page_summary"),
                          ui.layout_sidebar(
                ui.panel_sidebar(
-                   ui.input_select("select_graph", "Select Graph", ['Total Number of Gunshots per SCA',
+                   ui.input_select("select_graph", "Select Graph", ['Combined Visualization', 'Project Greenlight Cameras', 'Total Number of Gunshots per SCA', 'Total Shotspotter Gunshot Calls per SCA',
                                    'Total Gunshot Calls', 'Scout Car Areas (SCA)', 'Recanvas', 'Weekly ShotSpotter Incidents']),
                    ui.panel_conditional("input.select_graph === 'Total Gunshot Calls'",
                                         ui.output_text_verbatim("total_911_calls_summary")),
@@ -73,6 +73,12 @@ def server(input, output, session):
             return ui.HTML(text_dict["weekly_shotspotter_incidents"])
         elif selected_graph == 'Total Number of Gunshots per SCA':
             return ui.HTML(text_dict["gunshots_sca"])
+        elif selected_graph == "Total Shotspotter Gunshot Calls per SCA":
+            return ui.HTML(text_dict["gunshots_sca_shotspotter_only"])
+        elif selected_graph == "Project Greenlight Cameras":
+            return ui.HTML(text_dict["project_greenlight"])
+        elif selected_graph == "Combined Visualization":
+            return ui.HTML(text_dict["combined_visualization"])
 
     @output
     @render_widget
@@ -94,6 +100,12 @@ def server(input, output, session):
             return create_weekly_graph()
         elif selected_graph == 'Total Number of Gunshots per SCA':
             return create_map()
+        elif selected_graph == 'Total Shotspotter Gunshot Calls per SCA':
+            return create_map_only_SS()
+        elif selected_graph == 'Project Greenlight Cameras':
+            return create_greenlight_map()
+        elif selected_graph == 'Combined Visualization':
+            return create_combined_map()
 
     @output
     @render.text

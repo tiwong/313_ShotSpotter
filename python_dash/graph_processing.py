@@ -13,9 +13,11 @@ total911 = load_911('clean_updated_gunshots.csv')
 total911['category'] = total911['category'].str.replace(" ", "")
 shotspt_df = total911[(total911.category.str.contains(
     "SHOTSPT"))].copy()
-
+greenlight_df = pd.read_csv('Project_Green_Light_Locations.csv')
+greenlight_df = greenlight_df.dropna()
 
 # 911 Graph
+
 
 def create_911_graph():
     ss_sca_total = total911.sca.unique()
@@ -303,4 +305,84 @@ def create_map():
                                opacity=0.85,
                                title='All Gunshots')
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    return fig
+
+
+def create_map_only_SS():
+    sca = get_SCAs()
+    sca_counts = shotspt_df.groupby(by=['sca']).size().to_frame().reset_index()
+    sca_counts.columns = ['sca', 'shots']
+
+    sca_counts_filtered = sca_counts[sca_counts['shots'] >= 10]
+
+    sca_counts_filtered['log_shots'] = np.log(sca_counts_filtered['shots'])
+
+    fig = px.choropleth_mapbox(sca_counts_filtered, geojson=sca,
+                               locations='sca',
+                               color='log_shots',
+                               featureidkey="properties.Area",
+                               mapbox_style='carto-positron',
+                               color_continuous_scale='matter',
+                               zoom=9.25,
+                               center={'lat': 42.3314, 'lon': -83.0458},
+                               opacity=0.85,
+                               title='All Gunshots',
+                               hover_data={'shots': True, 'log_shots': False})
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    return fig
+
+
+def create_greenlight_map():
+    fig = px.scatter_mapbox(greenlight_df,
+                            lat="latitude",
+                            lon="longitude",
+                            hover_name="business_name",
+                            hover_data=["address", "business_type"],
+                            color_discrete_sequence=["fuchsia"],
+                            zoom=10,
+                            height=600)
+
+    fig.update_layout(mapbox_style="open-street-map")
+
+    return fig
+
+
+def create_combined_map():
+    sca = get_SCAs()
+    sca_counts = total911.groupby(by=['sca']).size().to_frame().reset_index()
+    sca_counts.columns = ['sca', 'shots']
+    sca_counts.sort_values(by='shots')
+
+    fig = px.choropleth_mapbox(sca_counts, geojson=sca,
+                               locations='sca',
+                               color='shots',
+                               featureidkey="properties.Area",
+                               mapbox_style='carto-positron',
+                               color_continuous_scale='matter',
+                               opacity=0.5,
+                               title='Gunshots and Greenlight Locations')
+
+    sca_counts = shotspt_df.groupby(by=['sca']).size().to_frame().reset_index()
+    sca_counts.columns = ['sca', 'shots']
+    sca_counts.sort_values(by='shots')
+
+    fig.add_choroplethmapbox(geojson=sca,
+                             locations=sca_counts['sca'],
+                             z=sca_counts['shots'],
+                             featureidkey="properties.Area",
+                             colorscale='Viridis',
+                             marker_line_width=0)
+
+    fig.add_scattermapbox(lat=greenlight_df["latitude"],
+                          lon=greenlight_df["longitude"],
+                          mode='markers',
+                          marker=dict(size=6, color="green"),
+                          text=greenlight_df["business_name"],
+                          hoverinfo='text')
+
+    fig.update_layout(mapbox_style="carto-positron",
+                      mapbox_zoom=9.25,
+                      mapbox_center={"lat": 42.3314, "lon": -83.0458},
+                      margin={"r": 0, "t": 0, "l": 0, "b": 0})
+
     return fig
