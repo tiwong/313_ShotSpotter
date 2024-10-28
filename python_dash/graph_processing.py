@@ -16,8 +16,20 @@ shotspt_df = total911[(total911.category.str.contains(
 greenlight_df = pd.read_csv('Project_Green_Light_Locations.csv')
 greenlight_df = greenlight_df.dropna()
 
-# 911 Graph
+shotspt_locations_df = pd.read_csv('ShotSpotter_Wired.csv')
 
+lat_min, lat_max = 42.3, 42.6  # Replace with your desired latitude range
+lon_min, lon_max = -83.3, -82.9  # Replace with your desired longitude range
+
+# Apply the filter
+shotspt_locations_df = shotspt_locations_df[
+    (shotspt_locations_df['lat'] >= lat_min) &
+    (shotspt_locations_df['lat'] <= lat_max) &
+    (shotspt_locations_df['lon'] >= lon_min) &
+    (shotspt_locations_df['lon'] <= lon_max)
+]
+
+# 911 Graph
 
 def create_911_graph():
     ss_sca_total = total911.sca.unique()
@@ -346,6 +358,33 @@ def create_greenlight_map():
 
     return fig
 
+def create_shotspotter_map(show_greenlight=True, show_shotspotter=True):
+    fig = go.Figure()
+
+    # add map from greenlight function
+    if show_greenlight:
+        fig.add_scattermapbox(lat=greenlight_df["latitude"],
+                              lon=greenlight_df["longitude"],
+                              mode='markers',
+                              marker=dict(size=6, color="green"),
+                              # text=greenlight_df["business_name"],
+                              # hoverinfo='text',
+                              name='Project Greenlight')
+    if show_shotspotter:
+        fig.add_scattermapbox(lat=shotspt_locations_df["lat"],
+                              lon=shotspt_locations_df["lon"],
+                              mode='markers',
+                              marker=dict(size=6, color="blue"),
+                              name='ShotSpotter')
+
+    if not (show_greenlight or show_shotspotter):
+        fig.add_scattermapbox()
+
+    fig.update_layout(mapbox_style="open-street-map",
+                      mapbox_zoom=9.25,
+                      mapbox_center={"lat": 42.3714, "lon": -83.0458})
+
+    return fig
 
 def create_combined_map():
     sca = get_SCAs()

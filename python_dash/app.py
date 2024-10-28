@@ -1,13 +1,15 @@
-from graph_processing import create_911_summary, create_combined_map, create_greenlight_map, create_map, create_map_only_SS, create_recanvas_summary, create_sca_graph, create_911_graph, create_recanvas_graph, create_sca_graphs, create_sca_summary, create_weekly_graph, create_weekly_summary, get_precincts
+from graph_processing import create_911_summary, create_combined_map, create_greenlight_map, create_shotspotter_map, create_map, create_map_only_SS, create_recanvas_summary, create_sca_graph, create_911_graph, create_recanvas_graph, create_sca_graphs, create_sca_summary, create_weekly_graph, create_weekly_summary, get_precincts
 from shiny import App, render, reactive, ui
 import shinyswatch
 from shinywidgets import output_widget, register_widget, render_widget
 from utils import *
 from pathlib import Path
 
+# To run app - shiny run --reload --launch-browser app.py
 text_dict = {}
-file_names = ["recanvas", "scout_car_areas",
-              "total_911_calls", "weekly_shotspotter_incidents", "gunshots_sca", "gunshots_sca_shotspotter_only", "project_greenlight", "combined_visualization"]
+file_names = ["recanvas", "scout_car_areas", "total_911_calls", "weekly_shotspotter_incidents", "gunshots_sca",
+              "gunshots_sca_shotspotter_only", "project_greenlight", "combined_visualization", "shotspotter_locations"]
+
 
 for file in file_names:
     with open("Summaries/" + file + ".html") as f:
@@ -27,8 +29,12 @@ app_ui = ui.page_navbar(
                          ui.output_ui("page_summary"),
                          ui.layout_sidebar(
                ui.panel_sidebar(
-                   ui.input_select("select_graph", "Select Graph", ['Combined Visualization', 'Project Greenlight Cameras', 'Total Number of Gunshots per SCA', 'Total Shotspotter Gunshot Calls per SCA',
-                                   'Total Gunshot Calls', 'Scout Car Areas (SCA)', 'Recanvas', 'Weekly ShotSpotter Incidents']),
+                    # Removed 'Project Greenlight Cameras' from dropdown menu, but all other code is still intact
+                   ui.input_select("select_graph", "Select Graph", ['Combined Visualization', 'Total Number of Gunshots per SCA', 'Total Shotspotter Gunshot Calls per SCA',
+                                   'Total Gunshot Calls', 'Scout Car Areas (SCA)', 'Recanvas', 'Weekly ShotSpotter Incidents', 'Shotspotter / Project Greenlight Locations']),
+                   ui.panel_conditional("input.select_graph === 'Shotspotter / Project Greenlight Locations'",
+                                        [ui.input_checkbox("show_greenlight", "Project Greenlight", True),
+                                         ui.input_checkbox("show_shotspotter", "ShotSpotter", True)]),
                    ui.panel_conditional("input.select_graph === 'Total Gunshot Calls'",
                                         ui.output_text_verbatim("total_911_calls_summary")),
                    ui.panel_conditional("input.select_graph === 'Scout Car Areas (SCA)'",
@@ -79,12 +85,18 @@ def server(input, output, session):
             return ui.HTML(text_dict["project_greenlight"])
         elif selected_graph == "Combined Visualization":
             return ui.HTML(text_dict["combined_visualization"])
+        elif selected_graph == "Shotspotter / Project Greenlight Locations":
+            return ui.HTML(text_dict["shotspotter_locations"])
 
     @output
     @render_widget
     def render_graph():
         selected_graph = input.select_graph()
         selected_precinct = input.select_precinct()
+
+        # Check which datasets should be displayed
+        show_greenlight = input.show_greenlight()
+        show_shotspotter = input.show_shotspotter()
 
         print(selected_graph, selected_precinct)
         if selected_graph == 'Recanvas':
@@ -106,6 +118,8 @@ def server(input, output, session):
             return create_greenlight_map()
         elif selected_graph == 'Combined Visualization':
             return create_combined_map()
+        elif selected_graph == 'Shotspotter / Project Greenlight Locations':
+            return create_shotspotter_map(show_greenlight, show_shotspotter)
 
     @output
     @render.text
